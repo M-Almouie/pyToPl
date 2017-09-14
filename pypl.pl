@@ -1,5 +1,8 @@
 #!/usr/bin/perl -w
 
+# COMP[29]041 Assignment 1 - 17S2
+# Author: Mohamed Daniel Al Mouiee z5114185
+
 open F, '<',"$ARGV[0]" or die;
 $progName = $ARGV[0];
 $progName =~ s/\.py/\.pl/;
