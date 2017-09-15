@@ -19,7 +19,6 @@ sub variableMapper {
 	$Line = oppMapper(\@matchesSub,$Line, "-") if @matchesSub;
 	#Maps equations with /
 	@matchesDiv = $Line =~ /\/ *\(*[A-Za-z]\)*/g;
-	print"matchesDiv is @matchesDiv\n";
 	$Line = oppMapper(\@matchesDiv, $Line, "/") if @matchesDiv;
 	#Maps equations with *
 	@matchesTimes = $Line =~ /\* *\(*[A-Za-z]\)*/g;
@@ -54,8 +53,16 @@ sub oppMapper {
     return $Line2;
 }
 
-sub ifMapper() {
-
+sub ifMapper {
+    my ($Line) = @_;
+    (my $first, my $second) = $Line =~ /if(.*):(.*)?/;
+    $Line =~ s/($1)/\($first\)/;
+    $Line =~ s/:.*/ \{/;
+    push(@perlLines,$Line);
+    $second =~ s/^/    /;
+    print"$second\n";
+    push(@perlLines,$second);
+    push(@perlLines,"}");
 }
 
 sub whileMapper() {
@@ -93,6 +100,14 @@ while($line = <F>) {
 		if($line =~ /^[\w]* *= *\(*[\w]*\)*/) {
 		    $line = variableMapper($line);
 		}
+		#Subset 2: deals with simple if, while, for and logical statements	
+		if($line =~ /if .*:/) {
+		    ifMapper($line);
+		    next;
+		}
+		#if($line =~ /while .*:/) {
+		#    $line = whileMapper($line);
+		#}
 		$line .= ";";
 	}
 	push(@perlLines,$line);
