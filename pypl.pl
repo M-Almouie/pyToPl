@@ -6,7 +6,7 @@
 
 sub variableMapper {
     my ($Line) = @_;
-    ($first, $second) = $Line =~ /^([\w]*) *= *\(*([\w]*\)*)/;
+    ($first, $second) = $Line =~ /^ *([\w]*) *= *\(*([\w]*\)*)/;
 	$Line =~ s/($1)/\$$first /;
 	# If there are parentheses (at most 1) that wrap the variables
 	$Line =~ s/= *[A-Za-z]+[\w]*/= \$$second/ if $Line =~ /= *([\w]*)/;;
@@ -55,14 +55,22 @@ sub oppMapper {
 
 sub ifMapper {
     my ($Line) = @_;
-    (my $first, my $second) = $Line =~ /if(.*):(.*)?/;
+    $boolSepLine = 1 if !($Line =~ /: *[A-Za-z]/);
+    (my $first) = $Line =~ /if *(.*):/;
     $Line =~ s/($1)/\($first\)/;
-    $Line =~ s/:.*/ \{/;
-    push(@perlLines,$Line);
-    $second =~ s/^/    /;
-    print"$second\n";
-    push(@perlLines,$second);
-    push(@perlLines,"}");
+    if ($boolSepLine == 0) {
+        (my $second) = $Line =~ /:(.*)/;
+        $Line =~ s/:.*/ \{/;
+        push(@perlLines,$Line);
+        $second =~ s/^ *//;
+        $second = variableMapper($second);
+        $second =~ s/^/    /;
+        push(@perlLines,$second);
+        push(@perlLines,"}");
+    } else {
+        $Line =~ s/:.*/ \{/;
+        push(@perlLines,$Line);
+    }
 }
 
 sub whileMapper() {
@@ -81,6 +89,8 @@ open F, '<',"$ARGV[0]" or die;
 $progName = $ARGV[0];
 $progName =~ s/\.py/\.pl/;
 @perlLines =();
+$boolIf = 0;
+$boolSepLine = 0;
 while($line = <F>) {
 	chomp $line;
 	# Checks for empty lines in .py file
@@ -97,11 +107,12 @@ while($line = <F>) {
 			$line =~ s/"?\)/\\n"/;
 		}
 		#Subset 1: deals with Variables, Constants and Maths operations										
-		if($line =~ /^[\w]* *= *\(*[\w]*\)*/) {
+		if($line =~ /^ *[\w]* *= *\(*[\w]*\)*/) {
 		    $line = variableMapper($line);
 		}
 		#Subset 2: deals with simple if, while, for and logical statements	
 		if($line =~ /if .*:/) {
+		    $boolIf = 1;
 		    ifMapper($line);
 		    next;
 		}
