@@ -1,2 +1,4 @@
-subset 1: ops like ++, --, +=,...
-subset 2 : if mapper prob
+subset 1: ops like ++, --, +=,..., left hand side of = with mor than 1
+var is not working thus thats why if is not wrking
+subset 2 : if mapper multiple variable condition not converting to ( condition)
+while and for are same as if 

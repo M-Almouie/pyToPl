@@ -6,12 +6,15 @@
 
 sub variableMapper {
     my ($Line) = @_;
-    ($first, $second) = $Line =~ /^ *([\w]*) *= *\(*([\w]*\)*)/;
+    ($first, $second) = $Line =~ /^ *([\w]*) *=* *\(*([\w]*\)*)/;
+    #print"second is $second\n";
 	$Line =~ s/($1)/\$$first /;
 	# If there are parentheses (at most 1) that wrap the variables
 	$Line =~ s/= *[A-Za-z]+[\w]*/= \$$second/ if $Line =~ /= *([\w]*)/;;
 	$Line =~ s/= *\([A-Za-z]+[\w]*\)/= \(\$$second/ if $Line =~ /= *\(*([\w]*\))/;;
-	#Maps equations with +
+	#START HERE
+	@matchesPreAdd = $Line =~ / *\(*[A-Za-z]\)* *+ *=/;
+	#Maps equations with + 
 	@matchesAdd = $Line =~ /\+ *\(*[A-Za-z]\)*/g;
 	$Line = oppMapper(\@matchesAdd, $Line, "+") if @matchesAdd;
 	#Maps equations with -
@@ -39,14 +42,14 @@ sub oppMapper {
     my @matchArr = @{$_[0]};
     $Line2 = $_[1];
     $sign = $_[2];
-    print"matchArr is @matchArr\n";
-    print"line is $line\n";
-    print"sign is $sign\n";
+    #print"matchArr is @matchArr\n";
+    #print"line is $line\n";
+    #print"sign is $sign\n";
     foreach $matchEle (@matchArr) {
 	    $matchEle =~ s/(\+|\-|\*|\/) *//;
 	    $matchEle =~ s/\(//;
 	    $matchEle =~ s/\)//;
-	    print"matchEle is $matchEle\n";
+	    #print"matchEle is $matchEle\n";
         $Line2 =~ s/(\+|\-|\*|\/) *\($matchEle/$sign \(\$$matchEle/m if $Line2 =~ /(\+|\-|\*|\/) *\(*[A-Za-z]\)*/;
 	    $Line2 =~ s/(\+|\-|\*|\/) *$matchEle/$sign \$$matchEle/m if $Line2 =~ /(\+|\-|\*|\/) *[A-Za-z]/;
     }
@@ -55,34 +58,54 @@ sub oppMapper {
 
 sub ifMapper {
     my ($Line) = @_;
-    $boolSepLine = 1 if !($Line =~ /: *[A-Za-z]/);
-    (my $first) = $Line =~ /if *(.*):/;
-    $Line =~ s/($1)/\($first\)/;
-    if ($boolSepLine == 0) {
-        (my $second) = $Line =~ /:(.*)/;
-        $Line =~ s/:.*/ \{/;
-        push(@perlLines,$Line);
-        $second =~ s/^ *//;
-        $second = variableMapper($second);
-        $second =~ s/^/    /;
-        push(@perlLines,$second);
-        push(@perlLines,"}");
-    } else {
-        $Line =~ s/:.*/ \{/;
-        push(@perlLines,$Line);
-    }
+		$boolSepLine = 1 if !($Line =~ /: *[A-Za-z]/);
+		(my $first) = $Line =~ /if *(.*):/;
+		$first = variableMapper($first);
+		#print"first is $first\n";
+		#print"1 is $1\n";
+		#$ye = $Line =~ /$1/;
+		#print"now Line is ($Line)\n";
+		#print"temp is $temp\n" if $Line =~ / j = k + p/;
+		$Line =~ s/if .*($1)/if\($first\)/;
+		
+		if ($boolSepLine == 0) {
+		    (my $second) = $Line =~ /:(.*)/;
+		    $Line =~ s/:.*/ \{/;
+		    push(@perlLines,$Line);
+		    $second =~ s/^ *//;
+		    print"second is $second\n";
+		    $second = printMapper($second) if $second =~ /print/;
+		    $second = variableMapper($second) if !($second =~ /print/);
+		    $second = ifMapper($second) if $second =~ /if *:/;
+		    $second =~ s/^/    /;
+		    $second .= ";";
+		    push(@perlLines,$second);
+		    push(@perlLines,"}");
+		} else {
+		    $Line =~ s/:.*/ \{/;
+		    push(@perlLines,$Line);
+		}
 }
 
-sub whileMapper() {
+sub whileMapper {
 
 }
 
-sub forMapper() {
+sub forMapper {
 
 }
 
-sub forEachMapper() {
+sub forEachMapper {
 
+}
+
+sub printMapper {
+	my ($line) = @_;
+	(my $mat) = $line =~ /print\((.*)\)/;
+	$mat = variableMapper($mat);	
+	$line =~ s/\("?.*/ "$mat"/;
+	#$line =~ s/"?\)/\\n"/;
+	return $line;
 }
 
 open F, '<',"$ARGV[0]" or die;
@@ -103,17 +126,18 @@ while($line = <F>) {
 		$line =~ s/\/python[23]/\/perl -w/;
 	} else{
 		if($line =~ /print\(.*\)/) {
-			$line =~ s/\("?/ "/;
-			$line =~ s/"?\)/\\n"/;
+			$line = printMapper($line);
 		}
 		#Subset 1: deals with Variables, Constants and Maths operations										
-		if($line =~ /^ *[\w]* *= *\(*[\w]*\)*/) {
-		    $line = variableMapper($line);
+		if($line =~ /^ *\(*[\w]*\)* *= *\(*[\w]*\)*/) {
+		    $line = variableMapper($line) if !($line =~ /while|if|print/);
 		}
 		#Subset 2: deals with simple if, while, for and logical statements	
 		if($line =~ /if .*:/) {
 		    $boolIf = 1;
 		    ifMapper($line);
+		    
+		    #print"line is $line\n";
 		    next;
 		}
 		#if($line =~ /while .*:/) {
@@ -124,9 +148,9 @@ while($line = <F>) {
 	push(@perlLines,$line);
 }
 close F;
-open $F, '>', "$progName" or die;
+#open $F, '>', "$progName" or die;
 foreach $Line (@perlLines) {
-	print $F "$Line" if $Line ne "\n";
-	print $F "\n";
+	print "$Line" if $Line ne "\n";
+	print "\n";
 }
-close $F;
+#close $F;
