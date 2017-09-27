@@ -1,18 +1,15 @@
 #!/usr/bin/python3
 
 count = 0
-i = 2
-while i < 100:
-    k = i/2
+for i in range(2,100):
+    k = i // 2
     j = 2
-    while j <= k:
+    for j in range(2, k + 1):
         k = i % j
         if k == 0:
             count = count - 1
             break
-        k = i/2
-        j = j + 1
+        k = i // 2
     count = count + 1
-    i = i + 1
 print(count)
 
