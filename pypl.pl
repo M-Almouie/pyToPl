@@ -3,14 +3,14 @@
 # COMP[29]041 Assignment 1 - 17S2
 # Author: Mohamed Daniel Al Mouiee z5114185
 
-#open F, '<',"$ARGV[0]" or die;
-#$progName = $ARGV[0];
-#$progName =~ s/\.py/\.pl/;
+open F, '<',"$ARGV[0]" or die;
+$progName = $ARGV[0];
+$progName =~ s/\.py/\.pl/;
 $s = "";
 $boolSepLine = 0;
 @lists = ();
 #@dicts = ();
-while($line = <STDIN>) {
+while($line = <F>) {
 	chomp $line;
 	#finding number of spaces at the beginning of the line
 	$line =~  /^(\s*)/;
@@ -92,7 +92,7 @@ while($i > 0  && $#spaces > 0 ) {
 	    push(@perlLines,"$sp}");
         $i -= 4;
 }
-#close F;
+close F;
 #open $F, '>', "$progName" or die;
 foreach $Line (@perlLines) {
 	print "$Line" if $Line ne "\n";
