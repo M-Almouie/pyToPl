@@ -3,12 +3,14 @@
 # COMP[29]041 Assignment 1 - 17S2
 # Author: Mohamed Daniel Al Mouiee z5114185
 
-open F, '<',"$ARGV[0]" or die;
-$progName = $ARGV[0];
-$progName =~ s/\.py/\.pl/;
+#open F, '<',"$ARGV[0]" or die;
+#$progName = $ARGV[0];
+#$progName =~ s/\.py/\.pl/;
 $s = "";
 $boolSepLine = 0;
-while($line = <F>) {
+@lists = ();
+#@dicts = ();
+while($line = <STDIN>) {
 	chomp $line;
 	#finding number of spaces at the beginning of the line
 	$line =~  /^(\s*)/;
@@ -34,7 +36,7 @@ while($line = <F>) {
 		$line =~ s/\/python[23]/\/perl -w/;
 	}elsif($line =~ /import .*/) {
 	    $line =~ s/^.*$//;
-	}elsif($line =~ /sys\..*/) {
+	}elsif($line =~ /sys\.stdin\..+/ or $line =~ /sys\.stdout\..*/) {
 		$line = sysMapper($line);
 		$line .= ";";
     } 
@@ -44,7 +46,7 @@ while($line = <F>) {
 			$line = printMapper($line);
 		}
 		#Subset 1: deals with Variables, Constants and Maths operations										
-		if($line =~ /^ *\(*[\w]*\)* *[<>=]* *\(*[\w]*\)*/) {
+		if($line =~ /^ *\(*[\w]*\)* *([<>=]+ *\(*\w+)\)*/) {
 		    $line = variableMapper($line) if !($line =~ /elif|else|while|if|print|for|foreach|break|continue/);
 		}
 		#Subset 2: deals with simple if/elif/else, while, for and logical statements	
@@ -65,6 +67,13 @@ while($line = <F>) {
 		    forMapper($line);
 		    next;
 		}
+		#deals with lists
+		if($line =~ /\[.*\]/) {
+		    $line = listMapper($line);
+		}
+		if($line =~ /\b(\.append|\.pop|len\()\b/) {
+		    $line = listMethMapper($line);
+		}
 		# Assuming continue and break have at least one space before them
 	    $line =~ s/ break/last/;
 	    $line =~ s/ continue/next/;
@@ -83,7 +92,7 @@ while($i > 0  && $#spaces > 0 ) {
 	    push(@perlLines,"$sp}");
         $i -= 4;
 }
-close F;
+#close F;
 #open $F, '>', "$progName" or die;
 foreach $Line (@perlLines) {
 	print "$Line" if $Line ne "\n";
@@ -93,41 +102,41 @@ foreach $Line (@perlLines) {
 
 sub variableMapper {
     my ($line) = @_;
-    ($first, $second) = $line =~ /^ *([\w]*) *[\%\-\*\/\+!=<>]* *\(*([\w]*\)*)/;
-    #print"second is $second\n";
+    my ($first, $second) = $line =~ /^ *([\w]*) *[\%\-\*\/\+!=<>]* *\(*([\w]*\)*)/;
 	$line =~ s/($1)/\$$first /;
 	# If there are parentheses (at most 1) that wrap the variables
-	$line =~ s/= *[A-Za-z]+[\w]*/= \$$second/ if $line =~ /= *([\w]*)/;
-	$line =~ s/<= *[A-Za-z]+[\w]*/<= \$$second/ if $line =~ /<= *([\w]*)/;
-	$line =~ s/>= *[A-Za-z]+[\w]*/>= \$$second/ if $line =~ />= *([\w]*)/;
-	$line =~ s/< *[A-Za-z]+[\w]*/< \$$second/ if $line =~ /< *([\w]*)/;
-	$line =~ s/> *[A-Za-z]+[\w]*/> \$$second/ if $line =~ /> *([\w]*)/;
-	$line =~ s/!= *[A-Za-z]+[\w]*/!= \$$second/ if $line =~ /!= *([\w]*)/;
-	$line =~ s/= *\([A-Za-z]+[\w]*\)/= \(\$$second/ if $line =~ /= *\(*([\w]*\))/;;
-	#Maps equations with + 
-	@matchesAdd = $line =~ /\+ *\(*[A-Za-z]\)*/g;
-	$line = oppMapper(\@matchesAdd, $line, "+") if @matchesAdd;
-	#Maps equations with -
-	@matchesSub = $line =~ /\- *\(*[A-Za-z]\)*/g;
-	$line = oppMapper(\@matchesSub,$line, "-") if @matchesSub;
-	#Maps equations with /
-	@matchesDiv = $line =~ /\/ *\(*[A-Za-z]\)*/g;
-	$line = oppMapper(\@matchesDiv, $line, "/") if @matchesDiv;
-	#Maps equations with *
-	@matchesTimes = $line =~ /\* *\(*[A-Za-z]\)*/g;
-	$line = oppMapper(\@matchesTimes, $line, "*") if @matchesTimes;
-	#Maps equations with %/mod
-	@matchesMod = $line =~ /\% *\(*[A-Za-z]\)*/g;
-	$line = oppMapper(\@matchesMod, $line, "%");
-	#Maps equations with **/^
-	@matchesPowers = $line =~ /\*\* *\(*[A-Za-z]\)*/g;
-	foreach $matchPowers (@matchesPowers) {
-		$matchPowers =~ s/\*\* *//;
-		$matchPowers =~ s/\(//;
-		$matchPowers =~ s/\)//;
-		$line =~ s/\*\* *$matchPowers/\*\*\$$matchPowers/m if $line =~ /\*\* *[A-Za-z]/;
-		$line =~ s/\*\* *\($matchPowers/\*\*\(\$$matchPowers/m if $line =~ /\*\* *\(*[A-Za-z]\)*/;
-	}
+    $line =~ s/= *[A-Za-z]+[\w]*/= \$$second/ if $line =~ /= *([\w]*)/;
+    $line =~ s/<= *[A-Za-z]+[\w]*/<= \$$second/ if $line =~ /<= *([\w]*)/;
+    $line =~ s/>= *[A-Za-z]+[\w]*/>= \$$second/ if $line =~ />= *([\w]*)/;
+    $line =~ s/< *[A-Za-z]+[\w]*/< \$$second/ if $line =~ /< *([\w]*)/;
+    $line =~ s/> *[A-Za-z]+[\w]*/> \$$second/ if $line =~ /> *([\w]*)/;
+    $line =~ s/!= *[A-Za-z]+[\w]*/!= \$$second/ if $line =~ /!= *([\w]*)/;
+    $line =~ s/= *\([A-Za-z]+[\w]*\)/= \(\$$second/ if $line =~ /= *\(*([\w]*\))/;;
+    #Maps equations with + 
+    @matchesAdd = $line =~ /\+ *\(*[A-Za-z]\)*/g;
+    $line = oppMapper(\@matchesAdd, $line, "+") if @matchesAdd;
+    #Maps equations with -
+    @matchesSub = $line =~ /\- *\(*[A-Za-z]\)*/g;
+    $line = oppMapper(\@matchesSub,$line, "-") if @matchesSub;
+    #Maps equations with /
+    @matchesDiv = $line =~ /\/ *\(*[A-Za-z]\)*/g;
+    $line = oppMapper(\@matchesDiv, $line, "/") if @matchesDiv;
+    #Maps equations with *
+    @matchesTimes = $line =~ /\* *\(*[A-Za-z]\)*/g;
+    $line = oppMapper(\@matchesTimes, $line, "*") if @matchesTimes;
+    #Maps equations with %/mod
+    @matchesMod = $line =~ /\% *\(*[A-Za-z]\)*/g;
+    $line = oppMapper(\@matchesMod, $line, "%");
+    #Maps equations with **/^
+    @matchesPowers = $line =~ /\*\* *\(*[A-Za-z]\)*/g;
+    foreach $matchPowers (@matchesPowers) {
+	    $matchPowers =~ s/\*\* *//;
+	    $matchPowers =~ s/\(//;
+	    $matchPowers =~ s/\)//;
+	    $line =~ s/\*\* *$matchPowers/\*\*\$$matchPowers/m if $line =~ /\*\* *[A-Za-z]/;
+	    $line =~ s/\*\* *\($matchPowers/\*\*\(\$$matchPowers/m if $line =~ /\*\* *\(*[A-Za-z]\)*/;
+    }
+	$line =~ s/= *\$/= / if $line =~ /\$\w+\.pop\(/;
 	return $line;
 }
 
@@ -244,29 +253,35 @@ sub sysMapper {
         (my $first) = $line =~ /^ *(\w+) *= *int\(sys\.stdin\.readline\(\)\)/;
         $first = variableMapper($first);
         $line =~ s/($1).*/$first= \<STDIN\>/;
-        #number = int(sys.stdin.readline())
     }
     return $line;
 }
 
 sub forMapper {
     (my $line) = @_;
-    (my $first, my $second) = $line =~ /for *(\w+) *in * range\((.*)\) *:/;
-    $first = variableMapper($first);
-    (my @bounds) = split(/,/,$second);
-    $second = "";
-    while(@bounds) {
-        $temp =  shift(@bounds);
-        $temp = variableMapper($temp) if $temp =~ /[A-Za-z]/;
-        $second .= $temp;
-        $second .= "," if @bounds; 
+    if($line =~ /for *(\w+) *in * range\((.*)\) *:/){
+        (my $first, my $second) = $line =~ /for *(\w+) *in * range\((.*)\) *:/;
+        $first = variableMapper($first);
+        (my @bounds) = split(/,/,$second);
+        $second = "";
+        while(@bounds) {
+            $temp =  shift(@bounds);
+            $temp = variableMapper($temp) if $temp =~ /[A-Za-z]/;
+            $second .= $temp;
+            $second .= "," if @bounds; 
+        }
+        (my $num) = $second =~ /, *(.*)/;
+        $num .= "-1";
+        $second =~ s/,.*/.. $num/;
+        $line =~ s/for .*/foreach $first($second) {/;
+        push(@perlLines,$line);
     }
-    (my $num) = $second =~ /, *(.*)/;
-    $num .= "-1";
-    $second =~ s/,.*/.. $num/;
-    $line =~ s/for .*/foreach $first($second) {/;
-    push(@perlLines,$line);
-    #for i in range(0, 5):
+    if($line =~ /for *(\w+) *in * sys.stdin *:/) {
+         (my $first) = $line =~ /for *(\w+) *in/;
+        $first = variableMapper($first);
+        $line =~ s/^.*$/foreach $first(<STDIN>) {/;
+        push(@perlLines,$line);
+    }
 }
 
 sub printMapper {
@@ -281,4 +296,39 @@ sub printMapper {
 	$line =~ s/\(.*\)/ $mat,"\\n"/ if !($line =~ /\(".*"\)/);
 	$line =~ s/\(.*\)/ "$mat\\n"/;
 	return $line;
+}
+
+sub listMapper {
+    (my $line) = @_;
+    (my $first, my $second) = $line =~ /^ *(\w+) *= *\[(.*)\]/;
+    push(@lists,$first);
+    $first =~ s/^/@/;
+    $line =~ s/^.*$/$first= ($second)/;
+    return $line;
+}
+
+sub listMethMapper {
+    (my $Line) = @_;
+    if($line =~ /\.append/) {
+        (my $first, my $second) = $line =~ /(\w+)\.append\((\"?\w+\"?)\)/;
+        $line =~ s/$first.*/push(\@$first,\$$second)/ if !($second =~/"/);
+        $line =~ s/$first.*/push(\@$first,$second)/ if $second =~/"/;
+    }
+    if($line =~ /\.pop\(\)/) {
+        (my $first) = $line =~ /(\w+)\.pop/;
+        $line =~ s/$first.*/pop(\@$first)/;
+    }elsif($line =~ /\.pop\(\d+\)/) {
+        (my $first, my $second) = $line =~ /(\w+)\.pop\((\d+)\)/;
+        $line =~ s/$first.*/splice(\@$first,$second,1)/;
+    }
+    return $line;
+}
+
+sub strOfLists {
+    (my $str) = "";
+    foreach $list(@lists) {
+        $str .= $list."|";
+    }
+    $str =~ s/\|$//;
+    return $str;
 }

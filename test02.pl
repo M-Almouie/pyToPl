@@ -1,19 +1,5 @@
 #!/usr/bin/perl -w
 
-$count  = 0;
-foreach $i (2.. 100-1) {
-    $k  = $i / 2;
-    $j  = 2;
-    foreach $j (2.. $k+1-1) {
-        $k  = $i % $j;
-        if($k  == 0) {
-            $count  = $count - 1;
-           last;
-        }
-        $k  = $i / 2;
-    }
-    $count  = $count + 1;
-}
-print $count ,"\n";
-
-
+@lines = (11,22,33,44,55);
+@num = splice(@lines,3,1);
+print"num is @num\n";
