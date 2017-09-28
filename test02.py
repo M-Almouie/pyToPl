@@ -1,7 +1,6 @@
 #!/usr/bin/python3
-
-count = 0
-i = 2
+lines = []
+linfff[0] = linfff[1] + count + 9 + counting
 while i < 100:
     k = i/2
     j = 2
@@ -17,5 +16,8 @@ while i < 100:
 print(count)
 num = lines.pop(55)
 num = lines.pop()
+i = len(count) + 9
 lines.append(uo)
+
+
 

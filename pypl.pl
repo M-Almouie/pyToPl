@@ -3,14 +3,14 @@
 # COMP[29]041 Assignment 1 - 17S2
 # Author: Mohamed Daniel Al Mouiee z5114185
 
-open F, '<',"$ARGV[0]" or die;
-$progName = $ARGV[0];
-$progName =~ s/\.py/\.pl/;
+#open F, '<',"$ARGV[0]" or die;
+#$progName = $ARGV[0];
+#$progName =~ s/\.py/\.pl/;
 $s = "";
 $boolSepLine = 0;
 @lists = ();
 #@dicts = ();
-while($line = <F>) {
+while($line = <STDIN>) {
 	chomp $line;
 	#finding number of spaces at the beginning of the line
 	$line =~  /^(\s*)/;
@@ -41,7 +41,6 @@ while($line = <F>) {
 		$line .= ";";
     } 
 	else{
-	    
 		if($line =~ /print\(.*\)/) {
 			$line = printMapper($line);
 		}
@@ -74,6 +73,9 @@ while($line = <F>) {
 		if($line =~ /\b(\.append|\.pop|len\()\b/) {
 		    $line = listMethMapper($line);
 		}
+		if($line =~ /=.*len\(.*\)/) {
+		    $line = lenMapper($line);
+		}
 		# Assuming continue and break have at least one space before them
 	    $line =~ s/ break/last/;
 	    $line =~ s/ continue/next/;
@@ -92,9 +94,14 @@ while($i > 0  && $#spaces > 0 ) {
 	    push(@perlLines,"$sp}");
         $i -= 4;
 }
-close F;
+#close F;
 #open $F, '>', "$progName" or die;
 foreach $Line (@perlLines) {
+    if($Line =~ /;.*;/) {
+        ($random) = $Line =~ /;(.*);/;
+        $random = variableMapper($random);
+        $Line =~ s/;.*;/;$random;/;
+    }
 	print "$Line" if $Line ne "\n";
 	print "\n";
 }
@@ -105,13 +112,15 @@ sub variableMapper {
     my ($first, $second) = $line =~ /^ *([\w]*) *[\%\-\*\/\+!=<>]* *\(*([\w]*\)*)/;
 	$line =~ s/($1)/\$$first /;
 	# If there are parentheses (at most 1) that wrap the variables
-    $line =~ s/= *[A-Za-z]+[\w]*/= \$$second/ if $line =~ /= *([\w]*)/;
-    $line =~ s/<= *[A-Za-z]+[\w]*/<= \$$second/ if $line =~ /<= *([\w]*)/;
-    $line =~ s/>= *[A-Za-z]+[\w]*/>= \$$second/ if $line =~ />= *([\w]*)/;
-    $line =~ s/< *[A-Za-z]+[\w]*/< \$$second/ if $line =~ /< *([\w]*)/;
-    $line =~ s/> *[A-Za-z]+[\w]*/> \$$second/ if $line =~ /> *([\w]*)/;
-    $line =~ s/!= *[A-Za-z]+[\w]*/!= \$$second/ if $line =~ /!= *([\w]*)/;
-    $line =~ s/= *\([A-Za-z]+[\w]*\)/= \(\$$second/ if $line =~ /= *\(*([\w]*\))/;;
+	if(!($second =~ /len$/)) {
+        $line =~ s/= *[A-Za-z]+[\w]*/= \$$second/ if $line =~ /= *([\w]*)/;
+        $line =~ s/<= *[A-Za-z]+[\w]*/<= \$$second/ if $line =~ /<= *([\w]*)/;
+        $line =~ s/>= *[A-Za-z]+[\w]*/>= \$$second/ if $line =~ />= *([\w]*)/;
+        $line =~ s/< *[A-Za-z]+[\w]*/< \$$second/ if $line =~ /< *([\w]*)/;
+        $line =~ s/> *[A-Za-z]+[\w]*/> \$$second/ if $line =~ /> *([\w]*)/;
+        $line =~ s/!= *[A-Za-z]+[\w]*/!= \$$second/ if $line =~ /!= *([\w]*)/;
+        $line =~ s/= *\([A-Za-z]+[\w]*\)/= \(\$$second/ if $line =~ /= *\(*([\w]*\))/;
+    }
     #Maps equations with + 
     @matchesAdd = $line =~ /\+ *\(*[A-Za-z]\)*/g;
     $line = oppMapper(\@matchesAdd, $line, "+") if @matchesAdd;
@@ -300,10 +309,25 @@ sub printMapper {
 
 sub listMapper {
     (my $line) = @_;
-    (my $first, my $second) = $line =~ /^ *(\w+) *= *\[(.*)\]/;
-    push(@lists,$first);
-    $first =~ s/^/@/;
-    $line =~ s/^.*$/$first= ($second)/;
+    (my $first, my $second) = $line =~ /^ *(\w+\[?.*\]?) *= *\[?(.*?)\]?/;
+    (my $temp )= $first =~ s/\]?//;
+    $temp =~ s/\]?//;
+    push(@lists,$temp);
+    $first =~ s/^/\@/ if !($first =~ /\[/);
+    $first =~ s/^/\$/ if ($first =~ /\[/);
+    if (!($first =~ /\[/)) {
+         $line =~ s/^.*$/$first= ($second)/;
+    } else {
+        (my $third) = $line =~ /= *(.*)/;
+        @segs = split(/[\+\-\*\/\%]+ */,$third);
+        foreach $seg(@segs) {
+            (my $temp2) = $seg;
+            $temp2 =~ s/\[/\\[/;
+            $temp2 =~ s/\]/\\]/;
+            $third =~ s/$temp2/\$$seg/ if $seg =~ /[A-Za-z]/;
+        }
+        $line =~ s/^.*$/$first = $third/;
+    }
     return $line;
 }
 
@@ -320,6 +344,19 @@ sub listMethMapper {
     }elsif($line =~ /\.pop\(\d+\)/) {
         (my $first, my $second) = $line =~ /(\w+)\.pop\((\d+)\)/;
         $line =~ s/$first.*/splice(\@$first,$second,1)/;
+    }
+    return $line;
+}
+
+sub lenMapper {
+    (my $line) = @_;
+    (my $str) = strOfLists();
+    (my $first) = $line =~ /len\((.*)\)/;
+
+    if($str =~ /$first/) {
+        $line =~ s/len\(.*\)/\@$first/;
+    }else {
+        $line =~ s/len\(.*\)/length(\$$first)/;
     }
     return $line;
 }
