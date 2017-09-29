@@ -6,13 +6,12 @@
 import sys
 dines = {'name': 'zara', 'Age':9}
 fines = []
-dines['name'] = 'harry';
-fines[9] = count;
+dines[9] = count + a + 6 - $dines[0];
 for line in sys.stdin:
     fines.append(line)
-
+fines = sorted(dines)
 i = len(fines) - 1
 fines[1] = i;
 while i >= 0:
-    print(lines[i], end='')
+    
     i = i - 1

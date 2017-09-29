@@ -82,7 +82,7 @@ while($line = <F>) {
 		# Assuming continue and break have at least one space before them
 	    $line =~ s/ break/last/;
 	    $line =~ s/ continue/next/;
-		$line .= ";";
+		$line .= ";" if(!($line =~ /\[/));
 	}
 	push(@perlLines,$line);
 }
@@ -113,7 +113,12 @@ foreach $Line (@perlLines) {
 sub variableMapper {
     my ($line) = @_;
     my ($first, $second) = $line =~ /^ *([\w]*) *[\%\-\*\/\+!=<>]* *\(*([\w]*\)*)/;
-	$line =~ s/($1)/\$$first /;
+    my ($str) = strOfLists();
+    $str .= strOfDicts();
+    print"str is $str\n";
+    print"line is $line\n";
+    $line =~ s/$first/\@$first / if(($str =~ /\|?$first \|?/));
+	$line =~ s/$first/\$$first / if(!($str =~ /\|?$first \|?/));
 	# If there are parentheses (at most 1) that wrap the variables
 	if(!($second =~ /len$/)) {
         $line =~ s/= *[A-Za-z]+[\w]*/= \$$second/ if $line =~ /= *([\w]*)/;
@@ -322,12 +327,10 @@ sub listMapper {
     (my $line) = @_;
     (my $first, my $sign, my $second) = $line =~ /^ *(\w+\[?.*\]?) *([=<>!]+) *\[?(.*?)\]?/;
     (my $temp ) = $first;
-    $temp =~ s/\]?//;
-    $temp =~ s/\[?//;
+    $temp =~ s/\[?.*\]//;
     push(@lists,$temp);
     $first =~ s/^/\@/ if !($first =~ /\[/);
     $first =~ s/^/\$/ if ($first =~ /\[/);
-    print"second is $second\n";
     if($second eq "") {
         
     }
@@ -340,7 +343,8 @@ sub listMapper {
             (my $temp2) = $seg;
             $temp2 =~ s/\[/\\[/;
             $temp2 =~ s/\]/\\]/;
-            $third =~ s/$temp2/\$$seg/ if $seg =~ /[A-Za-z]/;
+            $third =~ s/$temp2/\$$seg/ if $seg =~ /[A-Za-z]/ and !($seg =~ /\"|\'/);
+            #print"third is $third\n";
         }
         $line =~ s/^.*$/$first$sign $third/;
     }
@@ -401,4 +405,14 @@ sub dictMapper {
     $line =~ s/:/=>/g;
     $line =~ s/\}//;
     return $line;
+}
+
+sub strOfDicts {
+    (my $str) = "";
+    foreach $dict(@dicts) {
+        $str .= $dict."|";
+    }
+    $str =~ s/\|$//;
+    
+    return $str;
 }
