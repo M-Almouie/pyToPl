@@ -1,23 +1,18 @@
 #!/usr/bin/python3
-lines = []
-linfff[0] = linfff[1] + count + 9 + counting
-while i < 100:
-    k = i/2
-    j = 2
-    while j <= k:
-        k = i % j
-        if k == 0:
-            count = count - 1
-            break
-        k = i/2
-        j = j + 1
-    count = count + 1
-    i = i + 1
-print(count)
-num = lines.pop(55)
-num = lines.pop()
-i = len(count) + 9
-lines.append(uo)
 
+# written by andrewt@cse.unsw.edu.au as a COMP2041 lecture example
+# Print line from stdin in reverse order
 
+import sys
+dines = {'name': 'zara', 'Age':9}
+fines = []
+dines['name'] = 'harry';
+fines[9] = count;
+for line in sys.stdin:
+    fines.append(line)
 
+i = len(fines) - 1
+fines[1] = i;
+while i >= 0:
+    print(lines[i], end='')
+    i = i - 1

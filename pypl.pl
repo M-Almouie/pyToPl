@@ -3,14 +3,14 @@
 # COMP[29]041 Assignment 1 - 17S2
 # Author: Mohamed Daniel Al Mouiee z5114185
 
-#open F, '<',"$ARGV[0]" or die;
-#$progName = $ARGV[0];
-#$progName =~ s/\.py/\.pl/;
+open F, '<',"$ARGV[0]" or die;
+$progName = $ARGV[0];
+$progName =~ s/\.py/\.pl/;
 $s = "";
 $boolSepLine = 0;
 @lists = ();
-#@dicts = ();
-while($line = <STDIN>) {
+@dicts = ();
+while($line = <F>) {
 	chomp $line;
 	#finding number of spaces at the beginning of the line
 	$line =~  /^(\s*)/;
@@ -70,6 +70,9 @@ while($line = <STDIN>) {
 		if($line =~ /\[.*\]/) {
 		    $line = listMapper($line);
 		}
+		if($line =~ /\{.*\}/) {
+		    $line = dictMapper($line);
+		}
 		if($line =~ /\b(\.append|\.pop|len\()\b/) {
 		    $line = listMethMapper($line);
 		}
@@ -94,7 +97,7 @@ while($i > 0  && $#spaces > 0 ) {
 	    push(@perlLines,"$sp}");
         $i -= 4;
 }
-#close F;
+close F;
 #open $F, '>', "$progName" or die;
 foreach $Line (@perlLines) {
     if($Line =~ /;.*;/) {
@@ -178,7 +181,8 @@ sub ifMapper {
 	if($first =~ /and|or|not/) {
         $first = logicMapper($first); 
     }else {
-	    $first = variableMapper($first);
+	    $first = variableMapper($first) if (!($first =~ /\[/));
+	    $first = listMapper($first) if ($first =~ /\[/);
 	}
     $line =~ s/if .*:/if\($first\):/;
     if ($boolSepLine == 0) {
@@ -216,7 +220,8 @@ sub whileMapper {
 	if($first =~ /and|or|not/) {
         $first = logicMapper($first); 
     }else {
-	    $first = variableMapper($first);
+	    $first = variableMapper($first) if (!($first =~ /\[/));
+	    $first = listMapper($first) if ($first =~ /\[/);
 	}
 	$line =~ s/while .*:/while\($first\):/;
 	if ($boolSepLine == 0) {
@@ -262,7 +267,13 @@ sub sysMapper {
         (my $first) = $line =~ /^ *(\w+) *= *int\(sys\.stdin\.readline\(\)\)/;
         $first = variableMapper($first);
         $line =~ s/($1).*/$first= \<STDIN\>/;
+    }else{#($line =~ /^ *\w+ *= *\(sys\.stdin\.readlines\(\)\)/) {
+        (my $first) = $line =~ /^ *(\w+) *= *sys\.stdin\.readlines\(\)/;
+        $first =~ s/^/\@/;
+        push(@lists, $first);
+        $line =~ s/^.*$/$first = <STDIN>/;
     }
+    #lines = sys.stdin.readlines();
     return $line;
 }
 
@@ -309,16 +320,21 @@ sub printMapper {
 
 sub listMapper {
     (my $line) = @_;
-    (my $first, my $second) = $line =~ /^ *(\w+\[?.*\]?) *= *\[?(.*?)\]?/;
-    (my $temp )= $first =~ s/\]?//;
+    (my $first, my $sign, my $second) = $line =~ /^ *(\w+\[?.*\]?) *([=<>!]+) *\[?(.*?)\]?/;
+    (my $temp ) = $first;
     $temp =~ s/\]?//;
+    $temp =~ s/\[?//;
     push(@lists,$temp);
     $first =~ s/^/\@/ if !($first =~ /\[/);
     $first =~ s/^/\$/ if ($first =~ /\[/);
+    print"second is $second\n";
+    if($second eq "") {
+        
+    }
     if (!($first =~ /\[/)) {
-         $line =~ s/^.*$/$first= ($second)/;
+         $line =~ s/^.*$/$first$sign ($second)/;
     } else {
-        (my $third) = $line =~ /= *(.*)/;
+        (my $third) = $line =~ /[=<>!]+ *(.*)/;
         @segs = split(/[\+\-\*\/\%]+ */,$third);
         foreach $seg(@segs) {
             (my $temp2) = $seg;
@@ -326,7 +342,7 @@ sub listMapper {
             $temp2 =~ s/\]/\\]/;
             $third =~ s/$temp2/\$$seg/ if $seg =~ /[A-Za-z]/;
         }
-        $line =~ s/^.*$/$first = $third/;
+        $line =~ s/^.*$/$first$sign $third/;
     }
     return $line;
 }
@@ -352,7 +368,6 @@ sub lenMapper {
     (my $line) = @_;
     (my $str) = strOfLists();
     (my $first) = $line =~ /len\((.*)\)/;
-
     if($str =~ /$first/) {
         $line =~ s/len\(.*\)/\@$first/;
     }else {
@@ -367,5 +382,23 @@ sub strOfLists {
         $str .= $list."|";
     }
     $str =~ s/\|$//;
+    
     return $str;
+}
+
+sub dictMapper {
+    (my $line) = @_;
+    (my $first, my $sign, my $second) = $line =~ /^ *(\w+\[?.*\]?) *([=<>!]+) *\{?(.*)\}?/;
+    (my $temp ) = $first;
+    $temp =~ s/\}?//;
+    $temp =~ s/\{?//;
+    push(@dicts,$temp);
+    $first =~ s/^/\%/ if !($first =~ /\[/);
+    $first =~ s/^/\$/ if ($first =~ /\[/);
+    if (!($first =~ /\{/)) {
+         $line =~ s/^.*$/$first$sign ($second)/;
+    }
+    $line =~ s/:/=>/g;
+    $line =~ s/\}//;
+    return $line;
 }
