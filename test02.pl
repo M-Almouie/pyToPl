@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 
 
-@lines = <STDIN>;
-$line_count  = @lines;
-print"$line_count\n";
+%lines = ('g' => 1);
+foreach $key (sort keys %lines) {
+	print"$key, ";
+}

@@ -48,6 +48,9 @@ while($line = <F>) {
 		if($line =~ /^ *\(*[\w]*\)* *([<>=]+ *\(*\w+)\)*/) {
 		    $line = variableMapper($line) if !($line =~ /elif|else|while|if|print|for|foreach|break|continue/);
 		}
+		if($line =~ /= *.*\.keys\(/) {
+			$line = keysMapper($line);
+		}
 		#Subset 2: deals with simple if/elif/else, while, for and logical statements	
 		if($line =~ /if .*:/) {
 		    ifMapper($line);
@@ -115,8 +118,6 @@ sub variableMapper {
     my ($first, $second) = $line =~ /^ *([\w]*) *[\%\-\*\/\+!=<>]* *\(*([\w]*\)*)/;
     my ($str) = strOfLists();
     $str .= strOfDicts();
-    print"str is $str\n";
-    print"line is $line\n";
     $line =~ s/$first/\@$first / if(($str =~ /\|?$first \|?/));
 	$line =~ s/$first/\$$first / if(!($str =~ /\|?$first \|?/));
 	# If there are parentheses (at most 1) that wrap the variables
@@ -325,15 +326,13 @@ sub printMapper {
 
 sub listMapper {
     (my $line) = @_;
-    (my $first, my $sign, my $second) = $line =~ /^ *(\w+\[?.*\]?) *([=<>!]+) *\[?(.*?)\]?/;
+    (my $first, my $sign, my $second) = $line =~ /^ *(\w+\[?.*\]?) *([=<>!]+) *\[(.*?)\]/;
     (my $temp ) = $first;
     $temp =~ s/\[?.*\]//;
     push(@lists,$temp);
     $first =~ s/^/\@/ if !($first =~ /\[/);
     $first =~ s/^/\$/ if ($first =~ /\[/);
-    if($second eq "") {
-        
-    }
+    print"second is $second\n";
     if (!($first =~ /\[/)) {
          $line =~ s/^.*$/$first$sign ($second)/;
     } else {
@@ -386,7 +385,6 @@ sub strOfLists {
         $str .= $list."|";
     }
     $str =~ s/\|$//;
-    
     return $str;
 }
 
@@ -407,12 +405,24 @@ sub dictMapper {
     return $line;
 }
 
+sub keysMapper {
+	(my $line) = @_;
+	(my $listName) = $line =~ /= *(.*)\.keys\(/;
+	$hashName = $listName;
+	$listName =~ s/^ *\$/\@/;
+	$hashName =~ s/^ *\$/\%/;
+	$listName =~ s/\..*//;
+	$hashName =~ s/\..*//;
+	$listName .= "List";
+	$line =~ s/^.*$/$listName = \(\);\nforeach \$key (sort keys $hashName) \{\n    push($listName,\$key);\n\}/;
+	return $line;
+}
+
 sub strOfDicts {
     (my $str) = "";
     foreach $dict(@dicts) {
         $str .= $dict."|";
     }
     $str =~ s/\|$//;
-    
     return $str;
 }
