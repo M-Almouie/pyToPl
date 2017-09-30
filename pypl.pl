@@ -46,7 +46,7 @@ while($line = <F>) {
 		}
 		#Subset 1: deals with Variables, Constants and Maths operations										
 		if($line =~ /^ *\(*[\w]*\)* *([<>=]+ *\(*\w+)\)*/) {
-		    $line = variableMapper($line) if !($line =~ /elif|else|while|if|print|for|foreach|break|continue/);
+		    $line = variableMapper($line) if !($line =~ /elif|else|while|if|print|for|foreach|break|continue|sorted\(/);
 		}
 		if($line =~ /= *.*\.keys\(/) {
 			$line = keysMapper($line);
@@ -79,8 +79,11 @@ while($line = <F>) {
 		if($line =~ /\b(\.append|\.pop|len\()\b/) {
 		    $line = listMethMapper($line);
 		}
-		if($line =~ /=.*len\(.*\)/) {
+		if($line =~ /=?.*len\(.*\)/) {
 		    $line = lenMapper($line);
+		}
+		if($line =~ /sorted\(/) {
+		    $line = sortedMapper($line);
 		}
 		# Assuming continue and break have at least one space before them
 	    $line =~ s/ break/last/;
@@ -312,41 +315,110 @@ sub forMapper {
 
 sub printMapper {
 	my ($line) = @_;
+	(my $end) = $line =~ /end *= *'(.*)'/;
 	(my $mat) = $line =~ /print\("*(.*)"*\)/;
-	if(($mat =~ /^ *$/)) {
-	    $line =~ s/^.*$/print"\\n"/;
-	    return $line
+    if(!($line =~ /\%/)) {
+	    if(($mat =~ /^ *$/)) {
+	        $line =~ s/^.*$/print"\\n"/;
+	        return $line
+	    }
+	    $mat =~ s/"//;
+	    $mat = variableMapper($mat) if(!($line =~ /\(".*".*\)/) and !($line =~ /\[/));
+	    if($line =~ /end *= *'/) {
+	        if ($line =~ /\[/) {
+	            (my $list) = $line =~ /([A-Za-z]\w+\[.*\])/; 
+	            $list = listMapper($list);
+	            $list =~ s/;//;
+	            $line =~ s/[A-Za-z]\w+\[.*\]/$list/;
+	            print"linnnnne is $line\n";
+	            $line =~ s/\(.*\)/ $mat,"$end"/ if(!($line =~ /\(".*".*\)/));
+	            $line =~ s/\, *end.*,/,/;
+	            print"linnnnne is $line\n";
+	        } else{
+	            $line =~ s/\(.*\)/ $mat,"$end"/ if(!($line =~ /\(".*".*\)/) and !($line =~ /\[/));
+	            $line =~ s/\, *end.*,/,/;	            
+	        }
+	        if($line =~ /"/) {
+	            $line =~ s/\, end.*//;
+	            $mat =~ s/\, end.*//;
+	            $line =~ s/\(.*/ "$mat$end"/ if($line =~ /\(".*".*/ and !($line =~ /\[/));
+	        }
+	    } else {
+	        $line =~ s/\(.*\)/ $mat,"\\n"/ if(!($line =~ /\(".*"\)/) and !($line =~ /\[/));
+	        $line = listMapper($line) if ($line =~ /\[/);
+	        $line =~ s/\(.*\)/ "$mat\\n"/;
+	    }
+	}else {
+	    (my $vars) = $line =~ /" *\% +(.*)\)/;
+	    $vars =~ s/\(//;
+	    $vars =~ s/\)//;
+	    $vars =~ s/, *end.*//;
+	    @vars = split(/ *, */,$vars);
+	    $strList = strOfLists();
+	    $strDict = strOfDicts();
+	    #$temp = shift @vars;
+	    while(@vars) {
+	        $temp = shift @vars;
+	        
+	        $line =~ s/\%[a-z]/\$$temp/ if(!($strList =~ /\|$temp\|/) and !($strDict =~ /\|$temp\|/));
+	        $line =~ s/\%\w/\@$temp/ if($strList =~ /\|$temp\|/);
+	        $line =~ s/\%\w/\%$temp/ if($strDict =~ /\|$temp\|/);
+	    }
+	    $line =~ s/\(/ /;
+	    if($line =~ /, *end *=/) {
+	        print"$line\n";
+	        (my $end1) = $line =~ /end *= *'(.*)'/;
+	        print"end1 is $end1\n";
+	        $line =~ s/\%.*/,/;
+	        $line =~ s/" *,.*$/$end1"/;
+	    } else {
+	        $line =~ s/\%.*//;
+	        $line =~ s/" *$/\\n"/;
+	    }
 	}
-	$mat =~ s/"//;
-	$mat = variableMapper($mat) if !($line =~ /\(".*"\)/);
-	$line =~ s/\(.*\)/ $mat,"\\n"/ if !($line =~ /\(".*"\)/);
-	$line =~ s/\(.*\)/ "$mat\\n"/;
 	return $line;
 }
 
 sub listMapper {
     (my $line) = @_;
-    (my $first, my $sign, my $second) = $line =~ /^ *(\w+\[?.*\]?) *([=<>!]+) *\[(.*?)\]/;
-    (my $temp ) = $first;
-    $temp =~ s/\[?.*\]//;
-    push(@lists,$temp);
-    $first =~ s/^/\@/ if !($first =~ /\[/);
-    $first =~ s/^/\$/ if ($first =~ /\[/);
-    print"second is $second\n";
-    if (!($first =~ /\[/)) {
-         $line =~ s/^.*$/$first$sign ($second)/;
-    } else {
-        (my $third) = $line =~ /[=<>!]+ *(.*)/;
-        @segs = split(/[\+\-\*\/\%]+ */,$third);
-        foreach $seg(@segs) {
-            (my $temp2) = $seg;
-            $temp2 =~ s/\[/\\[/;
-            $temp2 =~ s/\]/\\]/;
-            $third =~ s/$temp2/\$$seg/ if $seg =~ /[A-Za-z]/ and !($seg =~ /\"|\'/);
-            #print"third is $third\n";
+    if($line =~ /=/) {
+        (my $first, my $sign, my $second) = $line =~ /^ *(\w+\[?.*\]?) *([=<>!]+) *\[?(.*?)\]?/;
+        (my $temp ) = $first;
+        $temp =~ s/\[?.*\]//;
+        push(@lists,$temp);
+        $first =~ s/^/\@/ if !($first =~ /\[/);
+        $first =~ s/^/\$/ if ($first =~ /\[/);
+        $first =~ s/\[/[\$/ if $first =~ /\[[A-Za-z]/;
+        if (!($first =~ /\[/)) {
+             $line =~ s/^.*$/$first$sign ($second)/;
+        } else {
+            (my $third) = $line =~ /[=<>!]+ *(.*)/;
+            @segs = split(/[\+\-\*\/\%]+ */,$third);
+            foreach $seg(@segs) {
+                (my $temp2) = $seg;
+                $seg =~ s/\[/\\[/;
+                $seg =~ s/\]/\\]/;
+                if($temp2 =~ /\[[A-Za-z]\w*/) {
+                    (my $varMat) = $temp2 =~ /\[([A-Za-z]\w*)/;
+                    $varMat = variableMapper($varMat);
+                    $temp2 =~ s/\[.*?\]/[$varMat\]/;
+                    $temp2 =~ s/ +//;
+                }
+                $third =~ s/$seg/\$$temp2/ if($seg =~ /[A-Za-z]/ and !($seg =~ /\"|\'/));
+            }
+            $line =~ s/^.*$/$first$sign $third/;
         }
-        $line =~ s/^.*$/$first$sign $third/;
+    } else {
+        print"line is $line\n";
+        (my $first2) = $line =~ /(\w+\[.*\])/;
+        (my $temp3) = $first2;
+        $temp3 =~ s/\[/\\[/;
+        $temp3 =~ s/\]/\\]/;
+        $first2 =~ s/^/\$/;
+        $first2 =~ s/\[/[\$/ if $first2 =~ /\[[A-Za-z]/;
+        $line =~ s/$temp3/$first2/;
     }
+    $line =~ s/$/;/;
     return $line;
 }
 
@@ -378,6 +450,20 @@ sub lenMapper {
     }
     return $line;
 }
+
+sub sortedMapper {
+    (my $line) = @_;
+    (my $str) = strOfLists();
+    $line =~ s/sorted\(/sort\(/;
+    (my $first) = $line =~ /sort\((.*)\)/;
+    if($str =~ /\|?$first\|?/) {
+        $line =~ s/sort\(.*\)/sort(\@$first)/;
+    }else {
+        $line =~ s/sort\(.*\)/sort(\$$first)/;
+    }
+    return $line;
+}
+
 
 sub strOfLists {
     (my $str) = "";
