@@ -3,14 +3,11 @@
 # COMP[29]041 Assignment 1 - 17S2
 # Author: Mohamed Daniel Al Mouiee z5114185
 
-open F, '<',"$ARGV[0]" or die;
-$progName = $ARGV[0];
-$progName =~ s/\.py/\.pl/;
 $s = "";
 $boolSepLine = 0;
 @lists = ();
 @dicts = ();
-while($line = <F>) {
+while($line = <>) {
 	chomp $line;
 	#finding number of spaces at the beginning of the line
 	$line =~  /^(\s*)/;
@@ -54,7 +51,6 @@ while($line = <F>) {
 		#Subset 2: deals with simple if/elif/else, while, for and logical statements	
 		if($line =~ /if .*:/) {
 		    ifMapper($line);
-		    #print"line is $line\n";
 		    next;
 		}
 		if($line =~ /else *:/) {
@@ -70,7 +66,7 @@ while($line = <F>) {
 		    next;
 		}
 		#deals with lists
-		if($line =~ /\[.*\]/) {
+		if($line =~ /\[.*\]/ and !($line =~ /print/)) {
 		    $line = listMapper($line);
 		}
 		if($line =~ /\{.*\}/) {
@@ -103,8 +99,6 @@ while($i > 0  && $#spaces > 0 ) {
 	    push(@perlLines,"$sp}");
         $i -= 4;
 }
-close F;
-#open $F, '>', "$progName" or die;
 foreach $Line (@perlLines) {
     if($Line =~ /;.*;/) {
         ($random) = $Line =~ /;(.*);/;
@@ -114,7 +108,7 @@ foreach $Line (@perlLines) {
 	print "$Line" if $Line ne "\n";
 	print "\n";
 }
-#close $F;
+# End of Program
 
 sub variableMapper {
     my ($line) = @_;
@@ -173,8 +167,10 @@ sub oppMapper {
 	    $matchEle =~ s/\(//;
 	    $matchEle =~ s/\)//;
 	    #print"matchEle is $matchEle\n";
-        $line =~ s/(\+|\-|\*|\/|\%) *\($matchEle/$sign \(\$$matchEle/m if $line =~ /(\+|\-|\*|\/|\%) *\(*[A-Za-z]\)*/;
-	    $line =~ s/(\+|\-|\*|\/|\%) *$matchEle/$sign \$$matchEle/m if $line =~ /(\+|\-|\*|\/|\%) *[A-Za-z]/;
+        $line =~ s/(\+|\-|\*|\/|\%) *\($matchEle/$sign 
+        \(\$$matchEle/m if $line =~ /(\+|\-|\*|\/|\%) *\(*[A-Za-z]\)*/;
+	    $line =~ s/(\+|\-|\*|\/|\%) *$matchEle/$sign \$$matchEle/m 
+	    if $line =~ /(\+|\-|\*|\/|\%) *[A-Za-z]/;
     }
     $line =~ s/\/{2}/\//;
     return $line;
@@ -277,7 +273,7 @@ sub sysMapper {
         $first = variableMapper($first);
         $line =~ s/($1).*/$first= \<STDIN\>/;
     }else{#($line =~ /^ *\w+ *= *\(sys\.stdin\.readlines\(\)\)/) {
-        (my $first) = $line =~ /^ *(\w+) *= *sys\.stdin\.readlines\(\)/;
+        (my $first) = $line =~ /^ *(\w+) *= *sys\.stdin\.readlines\( *\)/;
         $first =~ s/^/\@/;
         push(@lists, $first);
         $line =~ s/^.*$/$first = <STDIN>/;
@@ -330,10 +326,8 @@ sub printMapper {
 	            $list = listMapper($list);
 	            $list =~ s/;//;
 	            $line =~ s/[A-Za-z]\w+\[.*\]/$list/;
-	            print"linnnnne is $line\n";
 	            $line =~ s/\(.*\)/ $mat,"$end"/ if(!($line =~ /\(".*".*\)/));
 	            $line =~ s/\, *end.*,/,/;
-	            print"linnnnne is $line\n";
 	        } else{
 	            $line =~ s/\(.*\)/ $mat,"$end"/ if(!($line =~ /\(".*".*\)/) and !($line =~ /\[/));
 	            $line =~ s/\, *end.*,/,/;	            
@@ -344,9 +338,11 @@ sub printMapper {
 	            $line =~ s/\(.*/ "$mat$end"/ if($line =~ /\(".*".*/ and !($line =~ /\[/));
 	        }
 	    } else {
+	        
 	        $line =~ s/\(.*\)/ $mat,"\\n"/ if(!($line =~ /\(".*"\)/) and !($line =~ /\[/));
 	        $line = listMapper($line) if ($line =~ /\[/);
-	        $line =~ s/\(.*\)/ "$mat\\n"/;
+	        print"line is $line\n";
+	        $line =~ s/\(|\)/ "/g;
 	    }
 	}else {
 	    (my $vars) = $line =~ /" *\% +(.*)\)/;
@@ -366,9 +362,7 @@ sub printMapper {
 	    }
 	    $line =~ s/\(/ /;
 	    if($line =~ /, *end *=/) {
-	        print"$line\n";
 	        (my $end1) = $line =~ /end *= *'(.*)'/;
-	        print"end1 is $end1\n";
 	        $line =~ s/\%.*/,/;
 	        $line =~ s/" *,.*$/$end1"/;
 	    } else {
@@ -381,9 +375,10 @@ sub printMapper {
 
 sub listMapper {
     (my $line) = @_;
-    if($line =~ /=/) {
+    if($line =~ /= *\w/) {
         (my $first, my $sign, my $second) = $line =~ /^ *(\w+\[?.*\]?) *([=<>!]+) *\[?(.*?)\]?/;
         (my $temp ) = $first;
+  
         $temp =~ s/\[?.*\]//;
         push(@lists,$temp);
         $first =~ s/^/\@/ if !($first =~ /\[/);
@@ -409,7 +404,7 @@ sub listMapper {
             $line =~ s/^.*$/$first$sign $third/;
         }
     } else {
-        print"line is $line\n";
+       
         (my $first2) = $line =~ /(\w+\[.*\])/;
         (my $temp3) = $first2;
         $temp3 =~ s/\[/\\[/;
