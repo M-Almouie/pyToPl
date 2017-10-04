@@ -341,7 +341,6 @@ sub printMapper {
 	        
 	        $line =~ s/\(.*\)/ $mat,"\\n"/ if(!($line =~ /\(".*"\)/) and !($line =~ /\[/));
 	        $line = listMapper($line) if ($line =~ /\[/);
-	        print"line is $line\n";
 	        $line =~ s/\(|\)/ "/g;
 	    }
 	}else {
@@ -370,15 +369,19 @@ sub printMapper {
 	        $line =~ s/" *$/\\n"/;
 	    }
 	}
+	$line =~ s/" *"/"/g;
+	if(!($end) and !($line =~ /\\n/)) {
+	    $line =~ s/" *$/\\n"/;
+	}
 	return $line;
 }
 
 sub listMapper {
     (my $line) = @_;
-    if($line =~ /= *\w/) {
-        (my $first, my $sign, my $second) = $line =~ /^ *(\w+\[?.*\]?) *([=<>!]+) *\[?(.*?)\]?/;
+    if($line =~ /= *\w/ or $line =~ /= *\[/) {
+        (my $first, my $sign, my $second) = $line =~ /^ *(\w+\[?.*\]?) *([=<>!]+) *\[?(.*)\]?/;
         (my $temp ) = $first;
-  
+        $second =~ s/\]//;
         $temp =~ s/\[?.*\]//;
         push(@lists,$temp);
         $first =~ s/^/\@/ if !($first =~ /\[/);
@@ -404,7 +407,6 @@ sub listMapper {
             $line =~ s/^.*$/$first$sign $third/;
         }
     } else {
-       
         (my $first2) = $line =~ /(\w+\[.*\])/;
         (my $temp3) = $first2;
         $temp3 =~ s/\[/\\[/;

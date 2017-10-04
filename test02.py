@@ -1,3 +1,4 @@
 #!/usr/bin/python3
 
-print(lines[i], end = '')
+for i in range(0,3) : 
+    print("Hello World")

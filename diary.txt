@@ -1,1 +1,22 @@
-13/09/17	18:00	18:15	put the first real entry in diary.txt (delete this line!)
+Wed   Oct 4 10:25:32 2017        Fixed subset 4
+Sat    Sep 30 19:04:53 2017      Subset 4 completed
+Fri     Sep 29 22:26:33 2017      Added keys method translation, still need to do string formatting % with sorted method and fix print function finally
+Fri     Sep 29 13:09:22 2017      Fixed translating dicts and lists from being variables
+Fri     Sep 29 12:28:46 2017      Added dictinary translation
+Thu   Sep 28 12:15:36 2017      Done most of list indexing; still in loops and if to fix indexing and sys.stdin.readlines() and complex print statements
+Wed  Sep 27 23:19:05 2017      Started subset 4 , list in-built append and pop done
+Wed  Sep 27 23:17:37 2017      Started subset 4 , list in-built append and pop done
+Wed  Sep 27 12:35:08 2017      Subset 3 finished, all autotests pass except for itoa
+Tue   Sep 26 12:17:48 2017      Multiple if/elif/else/while staements done, print fixed, still need to do sys and import for subset 3
+Mon  Sep 25 09:40:11 2017      Fixed if closing brackets, still need to fix if nested ifs and prog finishes suddenly, and mutiple closing brackets
+Wed  Sep 20 08:59:26 2017      Fixed some of if, need to fix variableMApper() with more variables on the left of =
+Mon  Sep 18 10:17:49 2017      Merge branch 'master' of gitlab.cse.unsw.EDU.AU:z5114185/17s2-comp2041-ass1
+Mon  Sep 18 10:17:19 2017      Fixed if still need to fix ending } for sep=1
+Mon  Sep 18 10:15:32 2017      Fixed if, still need } for sep = 0
+Mon  Sep 18 10:10:51 2017      Fixed if, still need to add ending } for sep = 0
+Sat   Sep 16 11:28:02 2017      Fixed most tab seperated statements
+Fri    Sep 15 11:33:30 2017      Added notes.txt
+Fri    Sep 15 11:28:32 2017      Started subset 2, still a problem with ifMapper()
+Thu  Sep 14 23:16:48 2017      Subset 1 done, redisgned fucntions to ease the tedious operations
+Thu  Sep 14 16:10:10 2017      Subset 0 and most of 1 done
+Thu  Sep 14 16:06:51 2017      Subset 0 and most of 1 done

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
 
-
-$count = 5;
-print $count , , "\n";
+@line = ("g","j");
+$count = pop(@line);
+print $count, "\n";
